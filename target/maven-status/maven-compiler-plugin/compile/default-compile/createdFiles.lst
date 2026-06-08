@@ -1,0 +1,3 @@
+com\syncfold\meet\MeetApplication.class
+com\syncfold\meet\handler\SignalingHandler.class
+com\syncfold\meet\config\WebSocketConfig.class

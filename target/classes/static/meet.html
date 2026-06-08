@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SyncFold — Workspace Huddle</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        :root {
+            --bg: #030303;
+            --red: #f03c3c;
+            --cyan: #00e5ff;
+            --violet: #9d6fff;
+            --green: #00ff88;
+            --amber: #ffb800;
+            --border: rgba(255, 255, 255, .06);
+            --text1: #fff;
+            --text2: rgba(255, 255, 255, .6);
+            --text3: rgba(255, 255, 255, .3);
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text1);
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* ── GRID BACKGROUND ── */
+        .bg-grid {
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255, 255, 255, .02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, .02) 1px, transparent 1px);
+            background-size: 50px 50px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* ── JOIN PANEL ── */
+        .join-container {
+            position: relative;
+            width: 400px;
+            background: rgba(15, 15, 20, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 36px;
+            z-index: 10;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            animation: panelFade .6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes panelFade {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .join-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 800;
+            font-size: 18px;
+            letter-spacing: -0.02em;
+        }
+        .gem {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--red) 0%, var(--violet) 100%);
+            border-radius: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 900;
+            box-shadow: 0 4px 15px rgba(240,60,60,0.3);
+            color: #fff;
+        }
+        .join-title h2 {
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            margin-bottom: 6px;
+        }
+        .join-title p {
+            font-size: 13px;
+            color: var(--text2);
+            line-height: 1.5;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .form-label {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text2);
+        }
+        .form-input {
+            width: 100%;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px 16px;
+            color: #fff;
+            font-size: 14px;
+            font-family: 'JetBrains Mono', monospace;
+            transition: all 0.3s;
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: rgba(157, 111, 255, 0.4);
+            background: rgba(255,255,255,0.07);
+            box-shadow: 0 0 15px rgba(157,111,255,0.1);
+        }
+
+        .join-btn {
+            background: #fff;
+            color: #000;
+            border: none;
+            border-radius: 12px;
+            padding: 14px;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .join-btn:hover {
+            transform: scale(1.02);
+            box-shadow: 0 0 30px rgba(255,255,255,0.15);
+        }
+
+        /* ── HUDDLE VIEW ── */
+        .huddle-container {
+            display: none;
+            flex-direction: column;
+            width: 100%;
+            height: 100vh;
+            position: relative;
+            z-index: 5;
+            padding: 24px;
+            gap: 24px;
+        }
+
+        .huddle-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 50px;
+        }
+        .room-badge {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            padding: 6px 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .room-badge .pulse-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--green);
+            border-radius: 50%;
+            animation: pg 1.8s infinite;
+        }
+
+        /* ── VIDEO GRID ── */
+        .video-grid {
+            flex-grow: 1;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            align-content: center;
+            justify-content: center;
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        .video-wrapper {
+            position: relative;
+            aspect-ratio: 16/10;
+            background: rgba(255,255,255,0.01);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        .video-wrapper.speaking {
+            border-color: rgba(0, 255, 136, 0.4);
+            box-shadow: 0 0 25px rgba(0, 255, 136, 0.15);
+        }
+
+        .video-wrapper video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 19px;
+        }
+
+        .video-overlay-label {
+            position: absolute;
+            bottom: 12px;
+            left: 12px;
+            background: rgba(0,0,0,0.65);
+            backdrop-filter: blur(8px);
+            padding: 4px 12px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            border: 1px solid rgba(255,255,255,0.04);
+            z-index: 10;
+        }
+
+        .video-fallback {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #09090b;
+            z-index: 1;
+            transition: opacity 0.3s;
+        }
+        .video-fallback.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .avatar-circle {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--violet) 0%, var(--cyan) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: 800;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+        }
+
+        /* ── CONTROL BAR ── */
+        .controls-bar {
+            height: 80px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .ctrl-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .ctrl-btn:hover {
+            background: rgba(255,255,255,0.08);
+            border-color: rgba(255,255,255,0.15);
+            transform: scale(1.05);
+        }
+        .ctrl-btn.muted {
+            background: rgba(240, 60, 60, 0.15);
+            border-color: rgba(240, 60, 60, 0.3);
+            color: var(--red);
+        }
+        .ctrl-btn.muted:hover {
+            background: rgba(240, 60, 60, 0.25);
+        }
+        .ctrl-btn.leave {
+            background: var(--red);
+            border-color: transparent;
+            color: #fff;
+        }
+        .ctrl-btn.leave:hover {
+            background: #d92b2b;
+            box-shadow: 0 0 30px rgba(240,60,60,0.4);
+        }
+
+        @keyframes pg {
+            0% { box-shadow: 0 0 0 0 rgba(0, 255, 136, .5); }
+            70% { box-shadow: 0 0 0 8px rgba(0, 255, 136, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 255, 136, 0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-grid"></div>
+
+    <!-- JOIN SESSION SCREEN -->
+    <div class="join-container" id="join-screen">
+        <div class="join-logo">
+            <div class="gem">SF</div>
+            SyncFold Meet
+        </div>
+        <div class="join-title">
+            <h2>Join Workspace Huddle</h2>
+            <p>Connect peer-to-peer over WebRTC with real-time video, audio, and instant synchronization.</p>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Room Code / ID</label>
+            <input type="text" class="form-input" id="input-room" placeholder="Enter room name (e.g. design-sync)" value="design-sync">
+        </div>
+        <button class="join-btn" id="btn-join">
+            <span>Enter Huddle Room</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+        </button>
+    </div>
+
+    <!-- HUDDLE CALL INTERFACE -->
+    <div class="huddle-container" id="huddle-screen">
+        <div class="huddle-header">
+            <div class="join-logo">
+                <div class="gem" style="width:26px; height:26px; font-size:10px; border-radius:6px;">SF</div>
+                SyncFold Meet
+            </div>
+            <div class="room-badge">
+                <span class="pulse-dot"></span>
+                <span>Active: <span id="label-room-id">design-sync</span></span>
+            </div>
+        </div>
+
+        <div class="video-grid" id="video-grid">
+            <!-- Local Stream Tile -->
+            <div class="video-wrapper" id="wrapper-me">
+                <video id="video-me" autoplay playsinline muted></video>
+                <div class="video-fallback" id="fallback-me">
+                    <div class="avatar-circle">You</div>
+                </div>
+                <div class="video-overlay-label">
+                    <span>You (Host)</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls-bar">
+            <button class="ctrl-btn" id="btn-mute-audio" title="Toggle Mic">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+                    <path d="M19 10v1a7 7 0 0 1-14 0v-1"/>
+                    <line x1="12" y1="19" x2="12" y2="22"/>
+                </svg>
+            </button>
+            <button class="ctrl-btn" id="btn-toggle-video" title="Toggle Camera">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                    <circle cx="12" cy="13" r="4"/>
+                </svg>
+            </button>
+            <button class="ctrl-btn leave" id="btn-leave" title="Leave Huddle">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-3.33-2.67m-2.67-3.34a19.79 19.79 0 0 1-3.07-8.63A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91"/>
+                    <line x1="23" y1="1" x2="1" y2="23"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const signalingUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/meet-signal`;
+        let socket = null;
+        let localStream = null;
+        const peerConnections = new Map(); // senderId -> RTCPeerConnection
+        
+        const iceServers = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' }
+            ]
+        };
+
+        const joinScreen = document.getElementById('join-screen');
+        const huddleScreen = document.getElementById('huddle-screen');
+        const btnJoin = document.getElementById('btn-join');
+        const inputRoom = document.getElementById('input-room');
+        const labelRoomId = document.getElementById('label-room-id');
+        const videoGrid = document.getElementById('video-grid');
+        const videoMe = document.getElementById('video-me');
+        const fallbackMe = document.getElementById('fallback-me');
+        
+        const btnMuteAudio = document.getElementById('btn-mute-audio');
+        const btnToggleVideo = document.getElementById('btn-toggle-video');
+        const btnLeave = document.getElementById('btn-leave');
+
+        let isAudioMuted = false;
+        let isVideoOff = false;
+
+        btnJoin.addEventListener('click', startHuddle);
+
+        async function startHuddle() {
+            const roomId = inputRoom.value.trim();
+            if (!roomId) return;
+
+            labelRoomId.innerText = roomId;
+            joinScreen.style.display = 'none';
+            huddleScreen.style.display = 'flex';
+
+            // 1. Capture user webcam/mic
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                videoMe.srcObject = localStream;
+                fallbackMe.classList.add('hidden');
+            } catch (e) {
+                console.warn("Camera/Mic denied or unavailable:", e);
+                // Try capturing audio only
+                try {
+                    localStream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
+                } catch (err) {
+                    console.error("Audio capture failed:", err);
+                }
+            }
+
+            // 2. Establish signaling websocket connection
+            socket = new WebSocket(signalingUrl);
+
+            socket.onopen = () => {
+                console.log("Connected to signaling server");
+                socket.send(JSON.stringify({ type: 'join', room: roomId }));
+            };
+
+            socket.onmessage = async (event) => {
+                const message = JSON.parse(event.data);
+                const sender = message.sender;
+
+                if (message.type === 'user-joined') {
+                    console.log("User joined room:", sender);
+                    // Initiate WebRTC connection as the existing participant
+                    createPeerConnection(sender, true);
+                } 
+                else if (message.type === 'offer') {
+                    console.log("Received WebRTC offer from:", sender);
+                    const pc = createPeerConnection(sender, false);
+                    await pc.setRemoteDescription(new RTCSessionDescription(message.offer));
+                    const answer = await pc.createAnswer();
+                    await pc.setLocalDescription(answer);
+                    socket.send(JSON.stringify({ type: 'answer', answer: answer, room: roomId }));
+                } 
+                else if (message.type === 'answer') {
+                    console.log("Received WebRTC answer from:", sender);
+                    const pc = peerConnections.get(sender);
+                    if (pc) {
+                        await pc.setRemoteDescription(new RTCSessionDescription(message.answer));
+                    }
+                } 
+                else if (message.type === 'candidate') {
+                    console.log("Received ICE candidate from:", sender);
+                    const pc = peerConnections.get(sender);
+                    if (pc) {
+                        await pc.addIceCandidate(new RTCIceCandidate(message.candidate));
+                    }
+                } 
+                else if (message.type === 'user-left') {
+                    console.log("User left room:", sender);
+                    closePeerConnection(sender);
+                }
+            };
+
+            socket.onclose = () => {
+                console.log("Signaling socket closed");
+            };
+        }
+
+        function createPeerConnection(peerId, isInitiator) {
+            if (peerConnections.has(peerId)) {
+                return peerConnections.get(peerId);
+            }
+
+            const pc = new RTCPeerConnection(iceServers);
+            peerConnections.set(peerId, pc);
+
+            // Add local tracks to P2P connection
+            if (localStream) {
+                localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+            }
+
+            // Handle ICE Candidate generation
+            pc.onicecandidate = (event) => {
+                if (event.candidate && socket && socket.readyState === WebSocket.OPEN) {
+                    socket.send(JSON.stringify({
+                        type: 'candidate',
+                        candidate: event.candidate,
+                        room: inputRoom.value.trim()
+                    }));
+                }
+            };
+
+            // When remote track arrives, add a video element to the grid
+            pc.ontrack = (event) => {
+                console.log("Remote track received from:", peerId);
+                let wrapper = document.getElementById(`wrapper-${peerId}`);
+                if (!wrapper) {
+                    wrapper = document.createElement('div');
+                    wrapper.className = 'video-wrapper';
+                    wrapper.id = `wrapper-${peerId}`;
+
+                    const video = document.createElement('video');
+                    video.autoplay = true;
+                    video.playsInline = true;
+                    video.id = `video-${peerId}`;
+
+                    const label = document.createElement('div');
+                    label.className = 'video-overlay-label';
+                    label.innerHTML = `<span>Guest ${peerId.slice(0, 4)}</span>`;
+
+                    wrapper.appendChild(video);
+                    wrapper.appendChild(label);
+                    videoGrid.appendChild(wrapper);
+
+                    video.srcObject = event.streams[0];
+                }
+            };
+
+            // If initiator, send the offer
+            if (isInitiator) {
+                pc.onnegotiationneeded = async () => {
+                    try {
+                        const offer = await pc.createOffer();
+                        await pc.setLocalDescription(offer);
+                        socket.send(JSON.stringify({
+                            type: 'offer',
+                            offer: offer,
+                            room: inputRoom.value.trim()
+                        }));
+                    } catch (err) {
+                        console.error("Negotiation error:", err);
+                    }
+                };
+            }
+
+            return pc;
+        }
+
+        function closePeerConnection(peerId) {
+            const pc = peerConnections.get(peerId);
+            if (pc) {
+                pc.close();
+                peerConnections.delete(peerId);
+            }
+            const wrapper = document.getElementById(`wrapper-${peerId}`);
+            if (wrapper) {
+                wrapper.remove();
+            }
+        }
+
+        // ── CONTROLS LOGIC ──
+        btnMuteAudio.addEventListener('click', () => {
+            isAudioMuted = !isAudioMuted;
+            if (localStream) {
+                localStream.getAudioTracks().forEach(track => track.enabled = !isAudioMuted);
+            }
+            btnMuteAudio.classList.toggle('muted', isAudioMuted);
+        });
+
+        btnToggleVideo.addEventListener('click', () => {
+            isVideoOff = !isVideoOff;
+            if (localStream) {
+                localStream.getVideoTracks().forEach(track => track.enabled = !isVideoOff);
+            }
+            btnToggleVideo.classList.toggle('muted', isVideoOff);
+            videoMe.style.opacity = isVideoOff ? '0' : '1';
+            fallbackMe.classList.toggle('hidden', !isVideoOff);
+        });
+
+        btnLeave.addEventListener('click', () => {
+            // Stop media streams
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+            }
+
+            // Close peer connections
+            peerConnections.forEach((pc, id) => {
+                pc.close();
+            });
+            peerConnections.clear();
+
+            // Clear remote grid elements
+            const remoteWrappers = videoGrid.querySelectorAll('.video-wrapper:not(#wrapper-me)');
+            remoteWrappers.forEach(w => w.remove());
+
+            // Close Socket
+            if (socket) {
+                socket.close();
+            }
+
+            // Reset UI
+            videoMe.srcObject = null;
+            fallbackMe.classList.remove('hidden');
+            joinScreen.style.display = 'flex';
+            huddleScreen.style.display = 'none';
+        });
+    </script>
+</body>
+</html>
